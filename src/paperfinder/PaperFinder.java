@@ -1,5 +1,6 @@
 package paperfinder;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -19,6 +20,7 @@ import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.*;
 import org.apache.lucene.search.*;
+import org.apache.lucene.search.spell.*;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.commons.io.*;
 import org.apache.commons.lang3.*;
@@ -40,6 +42,7 @@ public class PaperFinder extends HttpServlet {
 	private IndexSearcher searcher;
 	private Analyzer analyzer;
 	private QueryParser parser;
+	private SpellChecker spellcheck;
 	private boolean initialized = false; //A sentinel value to ensure initialization was performed correctly
 
     /**
@@ -56,6 +59,15 @@ public class PaperFinder extends HttpServlet {
 	        searcher = new IndexSearcher(reader);
 	        analyzer = new StandardAnalyzer();
 	        parser = new QueryParser("contents", analyzer);
+	        
+	        //System.out.println("got this far at least");
+	        String rPathDir = "spellcheck";//this.getServletContext().getRealPath("spellcheck");
+	        String rPathWords = "words.txt";  //this.getServletContext().getRealPath("words.txt");
+	        //System.out.println("rPathDir: " + rPathDir + " rPathWords: " + rPathWords);
+	        spellcheck = new SpellChecker(FSDirectory.open(Paths.get(rPathDir)));
+	       // System.out.println("spellcheck is null: " + (spellcheck == null));
+	        spellcheck.indexDictionary(new PlainTextDictionary(Paths.get(rPathWords)), new IndexWriterConfig(), true); //TODO: should change analyzer?
+	        
 	        initialized = true;
         } catch (Exception e) {
         	System.out.println("Exception: " + e.getMessage()); //Will be printed to Tomcat console
@@ -108,6 +120,19 @@ public class PaperFinder extends HttpServlet {
 	        
 	        //out.println(results.totalHits + " total matching documents");
 	        out.println("<total>" + results.totalHits + "</total>");
+	        
+	        if (results.totalHits == 0)
+	        {
+
+	        	String[] suggestions = spellcheck.suggestSimilar(paramQuery, 1);
+	        	if (suggestions.length > 0)
+	        	{
+			        out.println("<suggestion>");
+			        out.println(suggestions[0].trim());
+			        out.println("</suggestion>");
+	        	}
+
+	        }
 	        
 	        int pages = results.scoreDocs.length / pageSize + 1;
 	        out.println("<pages><current>" + page + "</current><last>" + pages + "</last></pages>");

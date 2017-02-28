@@ -97,9 +97,21 @@ legend {
 
   <xsl:template match="search">
 	  <xsl:apply-templates select="total"/>
-      <xsl:apply-templates select="results"/>
+      <xsl:choose>
+         <xsl:when test="total &gt; 0">
+           <xsl:apply-templates select="results"/>
+         </xsl:when>
+         <xsl:otherwise>
+           <xsl:apply-templates select="suggestion"/>
+         </xsl:otherwise>
+      </xsl:choose>
       <xsl:apply-templates select="pages"/>
+  </xsl:template>
 
+  <xsl:template match="suggestion">
+    <div class="alert alert-warning text-center col-md-6 offset-md-3" role="alert">
+      Sorry, no results!  Did you mean <a id="myLink" href="javascript:void(0)" onclick="makeQuery();"><strong id="suggestion"><xsl:value-of select="."/></strong></a>?
+    </div>
   </xsl:template>
 
   <xsl:template match="total">
@@ -210,6 +222,13 @@ legend {
 
 			xhr.send("query=" + encodeURIComponent($("#query").val()) + "&page=" + encodeURIComponent(page));
 
+		}
+		
+		function makeQuery()
+		{
+			query = $("#suggestion").html().trim();
+			$("#query").val(query);
+			send(0);
 		}
 		
 		function nextPage()
