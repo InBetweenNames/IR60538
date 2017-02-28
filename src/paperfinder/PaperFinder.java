@@ -1,20 +1,30 @@
 package paperfinder;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
+import org.apache.lucene.analysis.standard.*;
+import org.apache.lucene.analysis.*;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.*;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.commons.io.*;
 import org.apache.commons.lang3.*;
+import org.apache.lucene.search.highlight.*;
+import org.apache.lucene.index.memory.MemoryIndex;
+
 /**
  * Servlet implementation class PaperFinder
  * 
@@ -87,7 +97,7 @@ public class PaperFinder extends HttpServlet {
 	    		page = Integer.parseInt(paramPage);
 	    	}*/
 	        Query query = parser.parse(paramQuery);
-	        
+	        Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter("<highlight>", "</highlight>"), new QueryScorer(query));
 	        TopDocs results = searcher.search(query, reader.numDocs());
 	        
 	        //out.println(results.totalHits + " total matching documents");
@@ -103,13 +113,32 @@ public class PaperFinder extends HttpServlet {
 	                        //out.println("   Title: " + doc.get("title"));
 	                	out.println("\t\t<title>" + StringEscapeUtils.escapeXml10(title) + "</title>");
 	                }
+	                InputStream stream = Files.newInputStream(Paths.get(path));
+	                String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
+	                // String contents = doc.get("contents");
+	                //TODO: accelerate with pre-generated term vectors?
+	                if (contents != null)
+	                {
+	                	String xmlContents =  StringEscapeUtils.escapeXml10(contents);
+		                TokenStream tokenStream = TokenSources.getTokenStream("content", null, xmlContents, analyzer, highlighter.getMaxDocCharsToAnalyze() - 1);
+		                String context = highlighter.getBestFragments(tokenStream, xmlContents, 3, "...");
+		                if (context != null)
+		                {
+		                	out.println("\t\t<context>" + context + "</context>");
+		                }
+		                //out.println("\t\t<contents>p</contents>");
+	                }
+	                //out.println("\t\t<fields>" + doc.getFields() + "</fields>");
 	                out.println("\t\t<path>" + path + "</path>");
 	                out.println("\t</result>");
 	        }
 	        out.println("</results>");
         } catch (ParseException e) {
         	out.println("<error>Could not parse query!  Reason: " + e.getMessage() + "</error>");
-        } finally {
+        } catch (InvalidTokenOffsetsException e) {
+			// TODO Auto-generated catch block
+        	out.println("<error>Invalid token offsets!  Reason: " + e.getMessage() + "</error>");
+		} finally {
         	out.println("</search>");
         }
 
