@@ -97,12 +97,19 @@ legend {
   <xsl:template match="search">
 	  <xsl:apply-templates select="total"/>
       <xsl:apply-templates select="results"/>
+      <xsl:apply-templates select="pages"/>
 
   </xsl:template>
 
   <xsl:template match="total">
     <div class="alert alert-info text-center col-md-4 offset-md-4" role="alert">
       Total Results: <strong> <xsl:value-of select="."/>  </strong>
+    </div>
+  </xsl:template>
+
+  <xsl:template match="pages">
+    <div class="alert alert-info text-center col-md-4 offset-md-4" role="alert">
+      Number of pages: <strong> <xsl:value-of select="."/>  </strong>
     </div>
   </xsl:template>
 
@@ -118,11 +125,23 @@ legend {
 	<div class="card card-secondary mb-3">
     <div class="card-block p-0">
       <dl class="row m-0">
-      <dt class="col-sm-1 py-4 highlight" ><xsl:value-of select="position()" /></dt>
-      <dd class="col-sm-11 my-4" ><a><xsl:attribute name="href">../<xsl:value-of select="path"/></xsl:attribute><xsl:value-of select="title"/></a></dd>
+        <dt class="col-sm-1 py-4 highlight" ><xsl:value-of select="position()" /></dt>
+        <dd class="col-sm-11 my-4" ><h5><a><xsl:attribute name="href">../<xsl:value-of select="path"/></xsl:attribute><xsl:value-of select="title"/></a></h5><xsl:apply-templates select="context"/></dd>
       </dl>  
     </div>
     </div>
+  </xsl:template>
+
+  <xsl:template match="context">
+	<p>
+    <xsl:apply-templates />
+	</p>
+  </xsl:template>
+
+  <xsl:template match="highlight">
+    <strong>
+		<xsl:value-of select="."/>
+	</strong>
   </xsl:template>
 
 </xsl:stylesheet>	

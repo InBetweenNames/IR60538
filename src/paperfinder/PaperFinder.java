@@ -33,7 +33,7 @@ import org.apache.lucene.index.memory.MemoryIndex;
 @WebServlet(asyncSupported = true, urlPatterns = { "/PaperFinder" })
 public class PaperFinder extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final int pageSize = 20; //Unused, but will become useful in the future so that we can return reasonable sized responses to the user
+	private static final int pageSize = 10; //Unused, but will become useful in the future so that we can return reasonable sized responses to the user
 	
 	//Cached Lucene objects:
 	private IndexReader reader;
