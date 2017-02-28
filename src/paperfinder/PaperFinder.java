@@ -33,7 +33,7 @@ import org.apache.lucene.index.memory.MemoryIndex;
 @WebServlet(asyncSupported = true, urlPatterns = { "/PaperFinder" })
 public class PaperFinder extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final int pageSize = 1000; //Unused, but will become useful in the future so that we can return reasonable sized responses to the user
+	private static final int pageSize = 20; //Unused, but will become useful in the future so that we can return reasonable sized responses to the user
 	
 	//Cached Lucene objects:
 	private IndexReader reader;
@@ -91,19 +91,35 @@ public class PaperFinder extends HttpServlet {
 	    		out.println("<error>No query provided</error>");
 	    		return;
 	    	}
-	    	/*String paramPage = request.getParameter("page");
+	    	
+	    	String paramPage = request.getParameter("page");
 	    	int page = 0;
 	    	if (paramPage != null) {
 	    		page = Integer.parseInt(paramPage);
-	    	}*/
+	    	}
+	    	
 	        Query query = parser.parse(paramQuery);
 	        Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter("<highlight>", "</highlight>"), new QueryScorer(query));
 	        TopDocs results = searcher.search(query, reader.numDocs());
 	        
 	        //out.println(results.totalHits + " total matching documents");
 	        out.println("<total>" + results.totalHits + "</total>");
+	        out.println("<page>" + page + "</page>");
+	        
+	        int pages = results.scoreDocs.length / pageSize + 1;
+	        out.println("<pages>" + pages + "</pages>");
+	    
+	        
 	        out.println("<results>");
-	        for (int i = 0; i < results.scoreDocs.length; i++) { //Print ALL results, sorted, rather than only first n.
+	        
+	        int start = page*pageSize;
+	        int end = (page+1)*pageSize;
+	        if (end > results.scoreDocs.length)
+	        {
+	        	end = results.scoreDocs.length;
+	        }
+	        
+	        for (int i = start; i < end; i++) { //Print ALL results, sorted, rather than only first n.
 	                Document doc = searcher.doc(results.scoreDocs[i].doc);
 	                String path = doc.get("path");
 	                //out.println((i + 1) + ". " + path);
@@ -120,12 +136,16 @@ public class PaperFinder extends HttpServlet {
 	                if (contents != null)
 	                {
 	                	String xmlContents =  StringEscapeUtils.escapeXml10(contents);
-		                TokenStream tokenStream = TokenSources.getTokenStream("content", null, xmlContents, analyzer, highlighter.getMaxDocCharsToAnalyze() - 1);
+		                TokenStream tokenStream = TokenSources.getTokenStream("content", null, xmlContents, analyzer,  -1); //highlighter.getMaxDocCharsToAnalyze()
 		                String context = highlighter.getBestFragments(tokenStream, xmlContents, 3, "...");
 		                if (context != null)
 		                {
-		                	out.println("\t\t<context>" + context + "</context>");
+		                	out.println("\t\t<context>\n" + context + "</context>");
 		                }
+		                /*for (int j = 0; j < context.length; j++)
+		                {
+			                out.println("\t\t<context>\n" + context[j] + "</context>");
+		                }*/
 		                //out.println("\t\t<contents>p</contents>");
 	                }
 	                //out.println("\t\t<fields>" + doc.getFields() + "</fields>");
