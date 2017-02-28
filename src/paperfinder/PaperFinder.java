@@ -96,6 +96,10 @@ public class PaperFinder extends HttpServlet {
 	    	int page = 0;
 	    	if (paramPage != null) {
 	    		page = Integer.parseInt(paramPage);
+	    		if (page < 0)
+	    		{
+	    			page = 0;
+	    		}
 	    	}
 	    	
 	        Query query = parser.parse(paramQuery);
@@ -104,10 +108,9 @@ public class PaperFinder extends HttpServlet {
 	        
 	        //out.println(results.totalHits + " total matching documents");
 	        out.println("<total>" + results.totalHits + "</total>");
-	        out.println("<page>" + page + "</page>");
 	        
 	        int pages = results.scoreDocs.length / pageSize + 1;
-	        out.println("<pages>" + pages + "</pages>");
+	        out.println("<pages><current>" + page + "</current><last>" + pages + "</last></pages>");
 	    
 	        
 	        out.println("<results>");
