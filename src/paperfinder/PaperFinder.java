@@ -57,11 +57,13 @@ public class PaperFinder extends HttpServlet {
         //The lucene object caching is performed here in the constructor.  This means that queries can all use the same objects, rather than having to construct new ones.
         //This improves performance drastically.
         try {
-            String index = "citeseer2_index";
+            //String index = "citeseer2_index";
+        	String index = "sigmod_vldb_icse_index";
 	    	reader = DirectoryReader.open(FSDirectory.open(Paths.get(getServletContext().getRealPath(index))));
 	        searcher = new IndexSearcher(reader);
 	        analyzer = new StandardAnalyzer();
-	        parser = new QueryParser("contents", analyzer);
+	        //parser = new QueryParser("contents", analyzer);
+	        parser = new QueryParser("title", analyzer);
 	        
 	        //System.out.println("got this far at least");
 	        String rPathDir = getServletContext().getRealPath("spellcheck");
@@ -151,7 +153,7 @@ public class PaperFinder extends HttpServlet {
 	        
 	        for (int i = start; i < end; i++) { //Print ALL results, sorted, rather than only first n.
 	                Document doc = searcher.doc(results.scoreDocs[i].doc);
-	                String path = doc.get("path");
+	                //String path = doc.get("path");
 	                //out.println((i + 1) + ". " + path);
 	                out.println("\t<result>");
 	                String title = doc.get("title");
@@ -159,11 +161,23 @@ public class PaperFinder extends HttpServlet {
 	                        //out.println("   Title: " + doc.get("title"));
 	                	out.println("\t\t<title>" + StringEscapeUtils.escapeXml10(title) + "</title>");
 	                }
-	                InputStream stream = Files.newInputStream(Paths.get(getServletContext().getRealPath(path)));
-	                String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
+	                String conference = doc.get("conference");
+	                if (conference != null) {
+	                	out.println("\t\t<conference>" + conference + "</conference>");
+	                }
+	                String pageRank = doc.get("pageRank");
+	                if (pageRank != null) {
+	                	out.println("\t\t<pagerank>" + pageRank + "</pagerank>");
+	                }
+	                String PRcomponent = doc.get("pageRankComponent");
+	                if (PRcomponent != null) {
+	                	out.println("\t\t<pagerankraw>" + PRcomponent + "</pagerankraw>");
+	                }
+	                //InputStream stream = Files.newInputStream(Paths.get(getServletContext().getRealPath(path)));
+	                //String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
 	                // String contents = doc.get("contents");
 	                //TODO: accelerate with pre-generated term vectors?
-	                if (contents != null)
+	                /*if (contents != null)
 	                {
 	                	String xmlContents =  StringEscapeUtils.escapeXml10(contents);
 		                TokenStream tokenStream = TokenSources.getTokenStream("content", null, xmlContents, analyzer,  -1); //highlighter.getMaxDocCharsToAnalyze()
@@ -172,23 +186,18 @@ public class PaperFinder extends HttpServlet {
 		                {
 		                	out.println("\t\t<context>\n" + context + "</context>");
 		                }
-		                /*for (int j = 0; j < context.length; j++)
-		                {
-			                out.println("\t\t<context>\n" + context[j] + "</context>");
-		                }*/
-		                //out.println("\t\t<contents>p</contents>");
-	                }
+	                }*/
 	                //out.println("\t\t<fields>" + doc.getFields() + "</fields>");
-	                out.println("\t\t<path>" + path + "</path>");
+	                //out.println("\t\t<path>" + path + "</path>");
 	                out.println("\t</result>");
 	        }
 	        out.println("</results>");
         } catch (ParseException e) {
         	out.println("<error>Could not parse query!  Reason: " + e.getMessage() + "</error>");
-        } catch (InvalidTokenOffsetsException e) {
+        }/* catch (InvalidTokenOffsetsException e) {
 			// TODO Auto-generated catch block
         	out.println("<error>Invalid token offsets!  Reason: " + e.getMessage() + "</error>");
-		} finally {
+		}*/ finally {
         	out.println("</search>");
         }
 
