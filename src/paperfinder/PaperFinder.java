@@ -44,6 +44,7 @@ public class PaperFinder extends HttpServlet {
 	private Analyzer analyzer;
 	private QueryParser parser;
 	private SpellChecker spellcheck;
+	private Sort prSort;
 	private boolean initialized = false; //A sentinel value to ensure initialization was performed correctly
 
     /**
@@ -72,6 +73,10 @@ public class PaperFinder extends HttpServlet {
 	        spellcheck = new SpellChecker(FSDirectory.open(Paths.get(rPathDir)));
 
 	        spellcheck.indexDictionary(new PlainTextDictionary(Paths.get(rPathWords)), new IndexWriterConfig(), true); //TODO: should change analyzer?
+	        
+	        SortField sf = new SortField("pageRank", SortField.Type.LONG);
+	        sf.setMissingValue(Long.MAX_VALUE); //missing values should appear last
+	        prSort = new Sort(sf, SortField.FIELD_SCORE);
 	        
 	        initialized = true;
         } catch (Exception e) {
@@ -120,7 +125,7 @@ public class PaperFinder extends HttpServlet {
 	    	
 	        Query query = parser.parse(paramQuery);
 	        Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter("<highlight>", "</highlight>"), new QueryScorer(query));
-	        TopDocs results = searcher.search(query, reader.numDocs());
+	        TopDocs results = searcher.search(query, reader.numDocs(), prSort);
 	        
 	        //out.println(results.totalHits + " total matching documents");
 	        out.println("<total>" + results.totalHits + "</total>");
