@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
@@ -46,35 +47,36 @@ public class PaperFinder extends HttpServlet {
 	private boolean initialized = false; //A sentinel value to ensure initialization was performed correctly
 
     /**
+     * @throws ServletException 
      * @see HttpServlet#HttpServlet()
      */
-    public PaperFinder() {
-        super();
-        
+	public void init(ServletConfig config) throws ServletException
+	{
+		super.init(config);
+		
         //The lucene object caching is performed here in the constructor.  This means that queries can all use the same objects, rather than having to construct new ones.
         //This improves performance drastically.
         try {
             String index = "citeseer2_index";
-	    	reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
+	    	reader = DirectoryReader.open(FSDirectory.open(Paths.get(getServletContext().getRealPath(index))));
 	        searcher = new IndexSearcher(reader);
 	        analyzer = new StandardAnalyzer();
 	        parser = new QueryParser("contents", analyzer);
 	        
 	        //System.out.println("got this far at least");
-	        String rPathDir = "spellcheck";//this.getServletContext().getRealPath("spellcheck");
-	        String rPathWords = "words.txt";  //this.getServletContext().getRealPath("words.txt");
-	        //System.out.println("rPathDir: " + rPathDir + " rPathWords: " + rPathWords);
+	        String rPathDir = getServletContext().getRealPath("spellcheck");
+	        String rPathWords = getServletContext().getRealPath("words.txt");
+
 	        spellcheck = new SpellChecker(FSDirectory.open(Paths.get(rPathDir)));
-	       // System.out.println("spellcheck is null: " + (spellcheck == null));
+
 	        spellcheck.indexDictionary(new PlainTextDictionary(Paths.get(rPathWords)), new IndexWriterConfig(), true); //TODO: should change analyzer?
 	        
 	        initialized = true;
         } catch (Exception e) {
         	System.out.println("Exception: " + e.getMessage()); //Will be printed to Tomcat console
         }
-
-    }
-
+	}
+	
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 * 
@@ -157,7 +159,7 @@ public class PaperFinder extends HttpServlet {
 	                        //out.println("   Title: " + doc.get("title"));
 	                	out.println("\t\t<title>" + StringEscapeUtils.escapeXml10(title) + "</title>");
 	                }
-	                InputStream stream = Files.newInputStream(Paths.get(path));
+	                InputStream stream = Files.newInputStream(Paths.get(getServletContext().getRealPath(path)));
 	                String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
 	                // String contents = doc.get("contents");
 	                //TODO: accelerate with pre-generated term vectors?
