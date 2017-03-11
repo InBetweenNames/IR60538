@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
+
 import org.apache.lucene.analysis.standard.*;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.document.*;
@@ -51,31 +53,34 @@ public class PaperFinder extends HttpServlet {
      * @throws ServletException 
      * @see HttpServlet#HttpServlet()
      */
-	public void init(ServletConfig config) throws ServletException
-	{
-		super.init(config);
-		
+	
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+	    super.init(config); 
         //The lucene object caching is performed here in the constructor.  This means that queries can all use the same objects, rather than having to construct new ones.
         //This improves performance drastically.
         try {
             //String index = "citeseer2_index";
         	String index = "sigmod_vldb_icse_index";
-	    	reader = DirectoryReader.open(FSDirectory.open(Paths.get(getServletContext().getRealPath(index))));
+	    	//reader = DirectoryReader.open(FSDirectory.open(Paths.get(getServletContext().getRealPath(index))));
+        	reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
 	        searcher = new IndexSearcher(reader);
 	        analyzer = new StandardAnalyzer();
 	        //parser = new QueryParser("contents", analyzer);
 	        parser = new QueryParser("title", analyzer);
 	        
 	        //System.out.println("got this far at least");
-	        String rPathDir = getServletContext().getRealPath("spellcheck");
-	        String rPathWords = getServletContext().getRealPath("words.txt");
+	        //String rPathDir = getServletContext().getRealPath("spellcheck");
+	        String rPathDir = "spellcheck";
+	        //String rPathWords = getServletContext().getRealPath("words.txt");
+	        String rPathWords = "words.txt";
 
 	        spellcheck = new SpellChecker(FSDirectory.open(Paths.get(rPathDir)));
 
 	        spellcheck.indexDictionary(new PlainTextDictionary(Paths.get(rPathWords)), new IndexWriterConfig(), true); //TODO: should change analyzer?
 	        
-	        SortField sf = new SortField("pageRank", SortField.Type.LONG);
-	        sf.setMissingValue(Long.MAX_VALUE); //missing values should appear last
+	        SortField sf = new SortField("pageRankComponent", SortField.Type.DOUBLE, true);
+	        sf.setMissingValue(Double.NEGATIVE_INFINITY); //missing values should appear last
 	        prSort = new Sort(sf, SortField.FIELD_SCORE);
 	        
 	        initialized = true;
@@ -125,7 +130,7 @@ public class PaperFinder extends HttpServlet {
 	    	
 	        Query query = parser.parse(paramQuery);
 	        Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter("<highlight>", "</highlight>"), new QueryScorer(query));
-	        TopDocs results = searcher.search(query, reader.numDocs(), prSort);
+	        TopDocs results = searcher.search(query, reader.numDocs(), prSort, true, true);
 	        
 	        //out.println(results.totalHits + " total matching documents");
 	        out.println("<total>" + results.totalHits + "</total>");
@@ -143,7 +148,7 @@ public class PaperFinder extends HttpServlet {
 
 	        }
 	        
-	        int pages = results.scoreDocs.length / pageSize + 1;
+	        int pages = results.scoreDocs.length / pageSize;
 	        out.println("<pages><current>" + page + "</current><last>" + pages + "</last></pages>");
 	    
 	        
@@ -155,7 +160,7 @@ public class PaperFinder extends HttpServlet {
 	        {
 	        	end = results.scoreDocs.length;
 	        }
-	        
+	        DecimalFormat df = new DecimalFormat("#.#################");
 	        for (int i = start; i < end; i++) { //Print ALL results, sorted, rather than only first n.
 	                Document doc = searcher.doc(results.scoreDocs[i].doc);
 	                //String path = doc.get("path");
@@ -170,14 +175,17 @@ public class PaperFinder extends HttpServlet {
 	                if (conference != null) {
 	                	out.println("\t\t<conference>" + conference + "</conference>");
 	                }
-	                String pageRank = doc.get("pageRank");
+	                /*String pageRank = doc.get("pageRank");
 	                if (pageRank != null) {
 	                	out.println("\t\t<pagerank>" + pageRank + "</pagerank>");
-	                }
+	                }*/
 	                String PRcomponent = doc.get("pageRankComponent");
 	                if (PRcomponent != null) {
-	                	out.println("\t\t<pagerankraw>" + PRcomponent + "</pagerankraw>");
+	                	String c = df.format(Double.parseDouble(PRcomponent));
+	                	out.println("\t\t<pagerankraw>" + c + "</pagerankraw>");
 	                }
+	                float relevance = results.scoreDocs[i].score;
+	                out.println("\t\t<relevance>" + df.format(relevance) + "</relevance>");
 	                //InputStream stream = Files.newInputStream(Paths.get(getServletContext().getRealPath(path)));
 	                //String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
 	                // String contents = doc.get("contents");
