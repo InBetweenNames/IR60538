@@ -63,6 +63,9 @@ legend {
    				<div class="alert alert-success text-center col-md-4 offset-md-4 h5" role="alert">
 			    			<a href="538p2overview.pdf">Link to Report (phase 2)</a>
    				</div>
+   				<div class="alert alert-success text-center col-md-4 offset-md-4 h5" role="alert">
+			    			<a href="538p3overview.pdf">Link to Report (phase 3)</a>
+   				</div>
 			</div>
 			<div class="row">
 				<div id="result" class="container offset-md-1 col-md-10">
@@ -150,7 +153,7 @@ legend {
     <div class="card-block p-0">
       <dl class="row m-0">
         <dt class="col-sm-1 py-4 highlight" ><xsl:value-of select="position()" /></dt>
-        <dd class="col-sm-11 my-4" ><h5><a><xsl:attribute name="href">../<xsl:value-of select="path"/></xsl:attribute><xsl:value-of select="title"/></a></h5><xsl:apply-templates select="conference"/><xsl:apply-templates select="pagerank"/><xsl:apply-templates select="pagerankraw"/><xsl:apply-templates select="relevance"/><xsl:apply-templates select="context"/></dd>
+        <dd class="col-sm-11 my-4" ><h5><a><xsl:attribute name="href">../<xsl:value-of select="path"/></xsl:attribute><xsl:value-of select="title"/></a></h5><xsl:apply-templates select="conference"/><xsl:apply-templates select="pagerank"/><xsl:apply-templates select="pagerankraw"/><xsl:apply-templates select="relevance"/><xsl:apply-templates select="predicted"/><xsl:apply-templates select="context"/></dd>
       </dl>  
     </div>
     </div>
@@ -176,6 +179,10 @@ legend {
 
   <xsl:template match="relevance">
 	<h5>Lucene relevance: <xsl:value-of select="."/></h5>
+  </xsl:template>
+
+  <xsl:template match="predicted">
+	<h5>Predicted class: <xsl:value-of select="."/></h5>
   </xsl:template>
 
   <xsl:template match="highlight">

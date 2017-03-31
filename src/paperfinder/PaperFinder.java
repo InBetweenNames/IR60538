@@ -1,8 +1,10 @@
 package paperfinder;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
 import javax.servlet.ServletConfig;
@@ -16,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
+import java.util.Collections;
+import java.util.Vector;
 
 import org.apache.lucene.analysis.standard.*;
 import org.apache.lucene.analysis.*;
@@ -29,6 +33,126 @@ import org.apache.commons.io.*;
 import org.apache.commons.lang3.*;
 import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.index.memory.MemoryIndex;
+
+class MultinomialNaiveBayesClassifier {
+	public MultinomialNaiveBayesClassifier(Path path) throws IOException
+	{
+		//Load classifier information from file
+		
+        BufferedReader stream = new BufferedReader(new InputStreamReader(Files.newInputStream(path)));
+        
+        //File format:
+        /*
+         * Line: N (integer) -- number of terms
+         * Line: C (integer) -- number of classes
+         * Line(N): terms 
+         * Line(C): class names
+         * Line: priors[1..N] -- prior probabilities, space delimited (pre logged)
+         * Line--onwards: condProb[C][t] -- condProbs of classes, one per line (pre logged)
+         */
+        
+        String N_raw = stream.readLine();
+        N = Integer.parseInt(N_raw);
+        String C_raw = stream.readLine();
+        C = Integer.parseInt(C_raw);
+        
+        
+        V = new String[N];
+        classNames = new String[C];
+        prior = new double[C];
+        condProb = new double[C][N];
+        
+        for (int i = 0; i < N; i++)
+        {
+        	String v_raw = stream.readLine();
+        	V[i] = v_raw;
+        }
+        
+        for (int i = 0; i < C; i++)
+        {
+        	String c_raw = stream.readLine();
+        	classNames[i] = (c_raw);
+        }
+        
+        String[] priors_raw = stream.readLine().split("\\s");
+        for (int i = 0; i < C; i++)
+        {
+        	prior[i] = Double.parseDouble(priors_raw[i]);
+        }
+        
+        for (int i = 0; i < C; i++)
+        {
+        	String[] condProb_raw = stream.readLine().split("\\s");
+            for (int j = 0; j < N; j++)
+            {
+            	condProb[i][j] = Double.parseDouble(condProb_raw[j]);
+            }
+        }
+        
+	}
+	
+
+	public String classify(String title) {
+		
+		String[] tokens = title.replaceAll("[^a-zA-Z ]", " ").toLowerCase().split("\\s+");
+
+		//String[] tokens = title.split("\\s");
+		
+		double scores[] = new double[C];
+		
+		for (int i = 0; i < C; i++)
+		{
+			scores[i] = prior[i];
+		}
+		
+		for (int i = 0; i < tokens.length; i++)
+		{
+			String token = tokens[i];
+			
+			int index = 0;
+			while (index < V.length)
+			{
+				if (token.equals(V[index]))
+				{
+					break;
+				}
+				index++;
+			}
+			
+			if (index == V.length)
+			{
+				//Skip this token -- do not factor it into calculation
+				continue;
+			}
+			
+			for (int j = 0; j < C; j++)
+			{
+				scores[j] += condProb[j][index];
+			}
+		}
+		
+		double maxScore = Integer.MIN_VALUE;
+		int maxIndex = Integer.MIN_VALUE;
+		for (int i = 0; i < C; i++)
+		{
+			if (maxScore < scores[i])
+			{
+				maxScore = scores[i];
+				maxIndex = i;
+			}
+		}
+		
+		return classNames[maxIndex];
+		
+	}
+	
+	private int N;
+	private int C;
+	private String[] V;
+	private String[] classNames;
+	private double[] prior;
+	private double[][] condProb;
+}
 
 /**
  * Servlet implementation class PaperFinder
@@ -47,6 +171,7 @@ public class PaperFinder extends HttpServlet {
 	private QueryParser parser;
 	private SpellChecker spellcheck;
 	private Sort prSort;
+	private MultinomialNaiveBayesClassifier classifier;
 	private boolean initialized = false; //A sentinel value to ensure initialization was performed correctly
 
     /**
@@ -82,6 +207,8 @@ public class PaperFinder extends HttpServlet {
 	        SortField sf = new SortField("pageRankComponent", SortField.Type.DOUBLE, true);
 	        sf.setMissingValue(Double.NEGATIVE_INFINITY); //missing values should appear last
 	        prSort = new Sort(sf, SortField.FIELD_SCORE);
+	        
+	        classifier = new MultinomialNaiveBayesClassifier(Paths.get("classifier.dat"));
 	        
 	        initialized = true;
         } catch (Exception e) {
@@ -186,6 +313,9 @@ public class PaperFinder extends HttpServlet {
 	                }
 	                float relevance = results.scoreDocs[i].score;
 	                out.println("\t\t<relevance>" + df.format(relevance) + "</relevance>");
+	                
+	                String predicted = classifier.classify(title);
+	                out.println("\t\t<predicted>" + predicted + "</predicted>");
 	                //InputStream stream = Files.newInputStream(Paths.get(getServletContext().getRealPath(path)));
 	                //String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
 	                // String contents = doc.get("contents");
