@@ -103,6 +103,7 @@ legend {
 
   <xsl:template match="search">
 	  <xsl:apply-templates select="total"/>
+      <xsl:apply-templates select="clusters"/>
       <xsl:choose>
          <xsl:when test="total &gt; 0">
            <xsl:apply-templates select="results"/>
@@ -118,6 +119,28 @@ legend {
     <div class="alert alert-warning text-center col-md-6 offset-md-3" role="alert">
       Sorry, no results!  Did you mean <a id="myLink" href="javascript:void(0)" onclick="makeQuery();"><strong id="suggestion"><xsl:value-of select="."/></strong></a>?
     </div>
+  </xsl:template>
+
+  <xsl:template match="clusters">
+    <div class="alert alert-info text-center col-md-2 float-left" role="alert">
+      Clusters: <xsl:apply-templates select="cluster"/>
+    </div>
+  </xsl:template>
+
+  <xsl:template match="cluster">
+    <div><xsl:apply-templates select="name"/>: <xsl:apply-templates select="size"/></div>
+  </xsl:template>
+
+  <xsl:template match="name">
+    <xsl:element name="a">
+      <xsl:attribute name="href">javascript:void(0)</xsl:attribute>
+      <xsl:attribute name="onclick">clusterQuery("<xsl:value-of select="."/>")</xsl:attribute>
+      <xsl:value-of select="."/>
+    </xsl:element>
+  </xsl:template>
+
+  <xsl:template match="size">
+    <strong><xsl:value-of select="."/></strong>
   </xsl:template>
 
   <xsl:template match="total">
@@ -221,7 +244,7 @@ legend {
 		}
 
 		var currentPage = 0;
-		function send(page) {
+		function send(page, cluster) {
 			currentPage = page;
 			removeFeedback();
 			//$('#query').popover('dispose');
@@ -246,7 +269,15 @@ legend {
 			xhr.setRequestHeader("Content-type",
 					"application/x-www-form-urlencoded");
 
-			xhr.send("query=" + encodeURIComponent($("#query").val()) + "&page=" + encodeURIComponent(page));
+			if(typeof cluster === "undefined")
+			{
+				xhr.send("query=" + encodeURIComponent($("#query").val()) + "&page=" + encodeURIComponent(page));
+			}
+			else
+			{
+				xhr.send("query=" + encodeURIComponent($("#query").val()) + "&page=" + encodeURIComponent(page) + "&cluster=" + encodeURIComponent(cluster));	
+			}
+			
 
 		}
 		
@@ -255,6 +286,11 @@ legend {
 			query = $("#suggestion").html().trim();
 			$("#query").val(query);
 			send(0);
+		}
+		
+		function clusterQuery(cluster)
+		{
+			send(0, cluster);
 		}
 		
 		function nextPage()

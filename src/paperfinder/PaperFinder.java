@@ -19,6 +19,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 
 import org.apache.lucene.analysis.standard.*;
@@ -255,7 +259,16 @@ public class PaperFinder extends HttpServlet {
 	    		}
 	    	}
 	    	
-	        Query query = parser.parse(paramQuery);
+	    	String paramCluster = request.getParameter("cluster");
+	    	Query query;
+	    	if (paramCluster == null)
+	    	{
+	    		query = parser.parse(paramQuery);
+	    	}
+	    	else
+	    	{
+	    		query = parser.parse("cluster:" + paramCluster + " AND title:" + paramQuery);
+	    	}
 	        Highlighter highlighter = new Highlighter(new SimpleHTMLFormatter("<highlight>", "</highlight>"), new QueryScorer(query));
 	        TopDocs results = searcher.search(query, reader.numDocs(), prSort, true, true);
 	        
@@ -278,6 +291,30 @@ public class PaperFinder extends HttpServlet {
 	        int pages = results.scoreDocs.length / pageSize;
 	        out.println("<pages><current>" + page + "</current><last>" + pages + "</last></pages>");
 	    
+	        Map<String, Integer> clusterSet = new HashMap<String, Integer>();
+	        for (int i = 0; i < results.scoreDocs.length; i++) {
+	        	Document doc = searcher.doc(results.scoreDocs[i].doc);
+	        	String cluster = doc.get("cluster");
+	        	Integer count = clusterSet.get(cluster);
+	        	if (count == null)
+	        	{
+	        		count = 1;
+	        	}
+	        	else
+	        	{
+	        		count++;
+	        	}
+	        	clusterSet.put(cluster, count);
+	        }
+	        
+	        out.println("<clusters>");
+	        for (Map.Entry<String, Integer> entry : clusterSet.entrySet())
+	        {
+	        	String s = entry.getKey();
+	        	Integer sz = entry.getValue();
+	        	out.println("<cluster><name>" + s + "</name><size>" + sz + "</size></cluster>");
+	        }
+	        out.println("</clusters>");
 	        
 	        out.println("<results>");
 	        
@@ -316,6 +353,9 @@ public class PaperFinder extends HttpServlet {
 	                
 	                String predicted = classifier.classify(title);
 	                out.println("\t\t<predicted>" + predicted + "</predicted>");
+	                
+	                String cluster = doc.get("cluster");
+	                out.println("\t\t<cluster>" + cluster + "</cluster>");
 	                //InputStream stream = Files.newInputStream(Paths.get(getServletContext().getRealPath(path)));
 	                //String contents = IOUtils.toString(stream, StandardCharsets.UTF_8);
 	                // String contents = doc.get("contents");
