@@ -66,6 +66,10 @@ legend {
    				<div class="alert alert-success text-center col-md-4 offset-md-4 h5" role="alert">
 			    			<a href="538p3overview.pdf">Link to Report (phase 3)</a>
    				</div>
+   				<div class="alert alert-success text-center col-md-4 offset-md-4 h5" role="alert">
+			    			<div><a href="538finalreport.pdf">Link to Final Report</a></div>
+			    			<div><a href="https://docs.google.com/presentation/d/1I_xKkJeoNK84249zu8anLrm2AiLjhp7PpdlHHBr_rEM/edit?usp=sharing">Link to Presentation Slides</a></div>
+   				</div>
 			</div>
 			<div class="row">
 				<div id="result" class="container offset-md-1 col-md-10">
@@ -176,7 +180,7 @@ legend {
     <div class="card-block p-0">
       <dl class="row m-0">
         <dt class="col-sm-1 py-4 highlight" ><xsl:value-of select="position()" /></dt>
-        <dd class="col-sm-11 my-4" ><h5><a><xsl:attribute name="href">../<xsl:value-of select="path"/></xsl:attribute><xsl:value-of select="title"/></a></h5><xsl:apply-templates select="conference"/><xsl:apply-templates select="pagerank"/><xsl:apply-templates select="pagerankraw"/><xsl:apply-templates select="relevance"/><xsl:apply-templates select="predicted"/><xsl:apply-templates select="context"/></dd>
+        <dd class="col-sm-11 my-4" ><h5><a><xsl:attribute name="href">../<xsl:value-of select="path"/></xsl:attribute><xsl:value-of select="title"/></a></h5><xsl:apply-templates select="conference"/><xsl:apply-templates select="pagerank"/><xsl:apply-templates select="pagerankraw"/><xsl:apply-templates select="relevance"/><xsl:apply-templates select="predicted"/><h5>Cluster: <xsl:value-of select="cluster"/></h5><xsl:apply-templates select="context"/></dd>
       </dl>  
     </div>
     </div>
@@ -189,7 +193,7 @@ legend {
   </xsl:template>
 
   <xsl:template match="conference">
-	<h4>(<xsl:value-of select="."/>)</h4>
+	<h4>(Ground truth: <xsl:value-of select="."/>)</h4>
   </xsl:template>
 
   <xsl:template match="pagerank">
